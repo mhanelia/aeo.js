@@ -95,6 +95,58 @@ describe('auditSite', () => {
     const faqCheck = citability.checks.find(c => c.label.includes('FAQ'));
     expect(faqCheck?.passed).toBe(false);
   });
+
+  it('matches schema FAQ eligibility when auditing schema presence', () => {
+    const config = makeConfig({
+      pages: [{
+        pathname: '/pricing',
+        content: '## Pricing?\n\nPlans start at $10 per month.',
+      }],
+    });
+    const result = auditSite(config);
+    const schemaPresence = result.categories.find(c => c.name === 'Schema Presence')!;
+    const faqOrHowToCheck = schemaPresence.checks.find(c => c.label === 'FAQPage or HowTo schema');
+    expect(faqOrHowToCheck?.passed).toBe(false);
+  });
+
+  it('requires at least two HowTo steps when auditing schema presence', () => {
+    const config = makeConfig({
+      pages: [{
+        pathname: '/install',
+        content: '## Step 1: Install\n\nRun npm install aeo.js.',
+      }],
+    });
+    const result = auditSite(config);
+    const schemaPresence = result.categories.find(c => c.name === 'Schema Presence')!;
+    const faqOrHowToCheck = schemaPresence.checks.find(c => c.label === 'FAQPage or HowTo schema');
+    expect(faqOrHowToCheck?.passed).toBe(false);
+  });
+
+  it('passes schema presence for FAQ content that can generate FAQPage schema', () => {
+    const config = makeConfig({
+      pages: [{
+        pathname: '/faq',
+        content: '## What is aeo.js?\n\naeo.js generates answer-engine assets for websites.',
+      }],
+    });
+    const result = auditSite(config);
+    const schemaPresence = result.categories.find(c => c.name === 'Schema Presence')!;
+    const faqOrHowToCheck = schemaPresence.checks.find(c => c.label === 'FAQPage or HowTo schema');
+    expect(faqOrHowToCheck?.passed).toBe(true);
+  });
+
+  it('passes schema presence for HowTo content with two or more step headings', () => {
+    const config = makeConfig({
+      pages: [{
+        pathname: '/install',
+        content: '## Step 1: Install\n\nRun npm install aeo.js.\n\n## Step 2: Configure\n\nCreate aeo.config.ts.',
+      }],
+    });
+    const result = auditSite(config);
+    const schemaPresence = result.categories.find(c => c.name === 'Schema Presence')!;
+    const faqOrHowToCheck = schemaPresence.checks.find(c => c.label === 'FAQPage or HowTo schema');
+    expect(faqOrHowToCheck?.passed).toBe(true);
+  });
 });
 
 describe('formatAuditReport', () => {
